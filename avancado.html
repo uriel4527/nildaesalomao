@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CRIE SUA FOTO, EU VOU!</title>
+    <link rel="icon" href="logo.ico" type="image/x-icon">
+    <meta property="og:title" content="CRIE SUA FOTO, EU VOU!" />
+    <meta property="og:description" content="Crie e personalize sua foto com facilidade utilizando nossa ferramenta online." />
+    <meta property="og:image" content="/logo.png" />
+    <meta property="og:url" content="https://euvou-fawn.vercel.app" />
+    <meta property="og:type" content="website" />
+    
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+            background: linear-gradient(to right, #ff69b4, #ff1493); /* Gradiente rosa */
+        }
+
+        .controls {
+            margin-bottom: 20px;
+            text-align: center;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .controls .input-group {
+            display: flex;
+            flex-direction: column;
+            margin: 5px;
+            align-items: center;
+        }
+
+        .controls .input-group label {
+            display: block;
+            margin: 5px 0;
+        }
+
+        .controls .input-group button {
+            width: 40px; /* Largura uniforme para todos os botões */
+            height: 40px; /* Altura uniforme para todos os botões */
+            margin: 2px;
+            font-size: 16px; /* Tamanho da fonte dos botões */
+            line-height: 40px; /* Alinha o texto verticalmente */
+            text-align: center;
+            border: 1px solid #ddd;
+            border-radius: 5px; /* Arredonda os cantos dos botões */
+            background-color: #f0f0f0;
+            cursor: pointer;
+        }
+
+        .controls .input-group button:hover {
+            background-color: #e0e0e0; /* Cor de fundo ao passar o mouse */
+        }
+
+        .controls .input-group-row {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .controls .input-group-row .input-group {
+            flex-direction: column;
+            margin: 5px;
+        }
+
+        .controls .input-group-row .input-group:first-child {
+            margin-right: 20px;
+        }
+
+        .download-button {
+            margin: 20px 0;
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            text-align: center;
+            display: block;
+        }
+
+        .download-button:hover {
+            background-color: #0056b3;
+        }
+
+        #canvas-container {
+            position: relative;
+            max-width: 100%;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            margin-top: 20px; /* Espaço superior para separar do botão de download */
+        }
+
+        canvas {
+            border: 1px solid #ddd;
+            max-width: 100%;
+            height: auto;
+        }
+
+        /* Personalizando o botão de upload de arquivos */
+        input[type="file"] {
+            margin-bottom: 20px;
+            border: none;
+            padding: 10px;
+            font-size: 16px;
+            color: white;
+            background-color: black; /* Cor do botão */
+            border-radius: 5px; /* Bordas arredondadas */
+            cursor: pointer; /* Cursor como ponteiro */
+            display: inline-block;
+        }
+
+        input[type="file"]::-webkit-file-upload-button {
+            background: black; /* Cor do botão para Webkit */
+            color: white;
+            border: none;
+            padding: 10px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        input[type="file"]::-moz-file-upload-button {
+            background: black; /* Cor do botão para Firefox */
+            color: white;
+            border: none;
+            padding: 10px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        @media (max-width: 600px) {
+            canvas {
+                max-width: 90vw;
+                height: auto;
+            }
+
+            body {
+                padding: 10px;
+            }
+
+            .controls {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <input type="file" id="upload" accept="image/*">
+    <div class="controls">
+        <div class="input-group-row">
+            <div class="input-group">
+                <label for="scale">Escala:</label>
+                <button id="scale-dec">-</button>
+                <button id="scale-inc">+</button>
+            </div>
+            <div class="input-group">
+                <label for="rotate">Rotação:</label>
+                <button id="rotate-left">←</button>
+                <button id="rotate-right">→</button>
+            </div>
+        </div>
+        <div class="input-group-row">
+            <div class="input-group">
+                <label for="offsetX">Posição Horizontal:</label>
+                <button id="offsetX-dec">←</button>
+                <button id="offsetX-inc">→</button>
+            </div>
+            <div class="input-group">
+                <label for="offsetY">Posição Vertical:</label>
+                <button id="offsetY-dec">↑</button>
+                <button id="offsetY-inc">↓</button>
+            </div>
+        </div>
+    </div>
+    <button class="download-button" id="download">Baixar Imagem</button>
+    <div id="canvas-container">
+        <canvas id="canvas"></canvas>
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const canvas = document.getElementById('canvas');
+            const ctx = canvas.getContext('2d');
+            const upload = document.getElementById('upload');
+            const scaleDec = document.getElementById('scale-dec');
+            const scaleInc = document.getElementById('scale-inc');
+            const rotateLeft = document.getElementById('rotate-left');
+            const rotateRight = document.getElementById('rotate-right');
+            const offsetXDec = document.getElementById('offsetX-dec');
+            const offsetXInc = document.getElementById('offsetX-inc');
+            const offsetYDec = document.getElementById('offsetY-dec');
+            const offsetYInc = document.getElementById('offsetY-inc');
+            const downloadButton = document.getElementById('download');
+            const templateImage = new Image();
+            let userImage = new Image();
+            let userImageData = null;
+
+            templateImage.src = 'template.png';
+            
+            templateImage.onload = function() {
+                canvas.width = templateImage.width;
+                canvas.height = templateImage.height;
+                draw();
+            };
+
+            function draw() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                if (userImageData) {
+                    const { img, scale, rotate, offsetX, offsetY } = userImageData;
+
+                    ctx.save();
+                    ctx.translate(canvas.width / 2, canvas.height / 2);
+                    ctx.rotate(rotate * Math.PI / 180);
+                    ctx.scale(scale, scale);
+                    ctx.drawImage(img, offsetX - (img.width / 2), offsetY - (img.height / 2));
+                    ctx.restore();
+                }
+
+                ctx.drawImage(templateImage, 0, 0);
+            }
+
+            upload.addEventListener('change', function(event) {
+                const file = event.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        userImage.src = e.target.result;
+                        userImage.onload = function() {
+                            userImageData = {
+                                img: userImage,
+                                scale: 1,
+                                rotate: 0,
+                                offsetX: 0,
+                                offsetY: 0
+                            };
+                            draw();
+                        };
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+
+            function updateImageData() {
+                if (userImageData) {
+                    draw();
+                }
+            }
+
+            scaleInc.addEventListener('click', function() {
+                if (userImageData) {
+                    userImageData.scale = Math.min(userImageData.scale + 0.1, 3);
+                    updateImageData();
+                }
+            });
+
+            scaleDec.addEventListener('click', function() {
+                if (userImageData) {
+                    userImageData.scale = Math.max(userImageData.scale - 0.1, 0.1);
+                    updateImageData();
+                }
+            });
+
+            rotateLeft.addEventListener('click', function() {
+                if (userImageData) {
+                    userImageData.rotate = (userImageData.rotate - 15 + 360) % 360;
+                    updateImageData();
+                }
+            });
+
+            rotateRight.addEventListener('click', function() {
+                if (userImageData) {
+                    userImageData.rotate = (userImageData.rotate + 15) % 360;
+                    updateImageData();
+                }
+            });
+
+            offsetXInc.addEventListener('click', function() {
+                if (userImageData) {
+                    userImageData.offsetX += 10;
+                    updateImageData();
+                }
+            });
+
+            offsetXDec.addEventListener('click', function() {
+                if (userImageData) {
+                    userImageData.offsetX -= 10;
+                    updateImageData();
+                }
+            });
+
+            offsetYInc.addEventListener('click', function() {
+                if (userImageData) {
+                    userImageData.offsetY += 10;
+                    updateImageData();
+                }
+            });
+
+            offsetYDec.addEventListener('click', function() {
+                if (userImageData) {
+                    userImageData.offsetY -= 10;
+                    updateImageData();
+                }
+            });
+
+            downloadButton.addEventListener('click', function() {
+                if (userImageData) {
+                    const link = document.createElement('a');
+                    link.download = 'imagem-pronta.png';
+                    link.href = canvas.toDataURL('image/png');
+                    link.click();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
